@@ -153,7 +153,6 @@
   <ItemGroup>
     <ClInclude Include="framework.h" />
     <ClInclude Include="GameContext.h" />
-    <ClInclude Include="Mines.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>

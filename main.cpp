@@ -1,8 +1,9 @@
-// Mines.cpp : Defines the entry point for the application.
+// main.cpp : Defines the entry point for the application.
 //
 
 #include "framework.h"
-#include "Mines.h"
+#include "resource.h"
+#include "GameContext.h"
 
 #define MAX_LOADSTRING 100
 
@@ -150,8 +151,56 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: Add any drawing code that uses hdc here...
-            EndPaint(hWnd, &ps);
+
+			HDC memDC = CreateCompatibleDC(hdc);
+
+			// get window's client rectangle. We need this for bitmap creation.
+			RECT rcClientRect;
+			GetClientRect(hWnd, &rcClientRect);
+
+			// now we can create bitmap where we shall do our drawing
+			HBITMAP bmp = CreateCompatibleBitmap(hdc,
+				rcClientRect.right - rcClientRect.left,
+				rcClientRect.bottom - rcClientRect.top);
+
+			// we need to save original bitmap, and select it back when we are done,
+			// in order to avoid GDI leaks!
+			HBITMAP oldBmp = (HBITMAP) SelectObject(memDC, bmp);
+
+			GameContext* gameContext = GameContext::GetInstance();
+			int height = gameContext->GetActiveHeight();
+			int width = gameContext->GetActiveWidth();
+
+			HBRUSH emptyBrush = CreateSolidBrush(RGB(128, 128, 255));
+			HBRUSH revealedBrush = CreateSolidBrush(RGB(255, 255, 255));
+			for (int row = 0; row < height; row++) {
+				for (int col = 0; col < width; col++) {
+					int left = col * 25;
+					int top = row * 25;
+					int right = col * 25 + 25;
+					int bottom = row * 25 + 25;
+					if (gameContext->IsRevealed(row, col))
+						SelectBrush(memDC, revealedBrush);
+					else
+						SelectBrush(memDC, emptyBrush);
+
+					Rectangle(memDC, left, top, right, bottom);
+				}
+			}
+			DeleteObject(emptyBrush);
+			DeleteObject(revealedBrush);
+
+			// OK, everything is drawn into memory DC, 
+			// now is the time to draw that final result into our target DC
+
+			BitBlt(hdc, 0, 0, rcClientRect.right - rcClientRect.left,
+				rcClientRect.bottom - rcClientRect.top, memDC, 0, 0, SRCCOPY);
+
+			// all done, now we need to cleanup
+			SelectObject(memDC, oldBmp); // select back original bitmap
+			DeleteObject(bmp); // delete bitmap since it is no longer required
+			DeleteDC(memDC);   // delete memory DC since it is no longer required
+			EndPaint(hWnd, &ps); //завершение рисования
         }
         break;
     case WM_DESTROY:

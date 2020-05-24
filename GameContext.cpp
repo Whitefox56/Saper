@@ -2,7 +2,7 @@
 
 GameContext* GameContext::instance = nullptr;
 
-GameContext::~GameContext()
+GameContext::GameContext()
 {
 	settingsWidth = 10;
 	settingsHeight = 10;
@@ -14,6 +14,10 @@ GameContext::~GameContext()
 	revealed = nullptr;
 
 	Reset();
+}
+
+GameContext::~GameContext() {
+	DeleteField();
 }
 
 void GameContext::DeleteField()
@@ -67,20 +71,181 @@ void GameContext::PlaceMines()
 	while (placedCount < minesCount) {
 		int row = rand() % height;
 		int col = rand() % width;
+
+		if (!revealed[row][col] && !mines[row][col]) {
+			mines[row][col] = true;
+			placedCount++;
+		}
 	}
+
+	state = Active;
 }
 
-GameContext::~GameContext()
-{
-	DeleteField();
-}
-
-GameContext * GameContext::GetInstance()
+GameContext* GameContext::GetInstance()
 {
 	if (instance == nullptr) {
 		instance = new GameContext();
 	}
 	return instance;
+}
+
+bool GameContext::OutOfBounds(int row, int col)
+{
+	return row < 0 || col < 0 || row >= height || col >= width;
+}
+
+bool GameContext::IsRevealed(int row, int col)
+{
+	if (OutOfBounds(row, col))
+		throw std::out_of_range("The specified cell is out of bounds.");
+
+	return revealed[row][col];
+}
+
+bool GameContext::IsFlagged(int row, int col)
+{
+	if (OutOfBounds(row, col))
+		throw std::out_of_range("The specified cell is out of bounds.");
+
+	return flagged[row][col];
+}
+
+bool GameContext::HasMine(int row, int col)
+{
+	if (OutOfBounds(row, col))
+		throw std::out_of_range("The specified cell is out of bounds.");
+
+	return mines[row][col];
+}
+
+void GameContext::SetWidth(int value)
+{
+	if (value < 10) value = 10;
+	if (value > 30) value = 30;
+	settingsWidth = value;
+}
+
+void GameContext::SetHeight(int value)
+{
+	if (value < 10) value = 10;
+	if (value > 24) value = 24;
+	settingsHeight = value;
+}
+
+void GameContext::SetMinesCount(int value)
+{
+	int min = 10;
+	int max = width * height - width - height;
+	if (value < min) value = min;
+	if (value > max) value = max;
+	settingsMinesCount = value;
+}
+
+void GameContext::SetTimeLimit(int value)
+{
+	if (value > 900) value = 900;
+	if (value != 0 && value < 5) value = 5;
+	settingsTimeLimit = value;
+}
+
+int GameContext::GetWidth()
+{
+	return settingsWidth;
+}
+
+int GameContext::GetHeight()
+{
+	return settingsHeight;
+}
+
+int GameContext::GetMinesCount()
+{
+	return settingsMinesCount;
+}
+
+int GameContext::GetTimeLimit()
+{
+	return settingsTimeLimit;
+}
+
+int GameContext::GetActiveHeight()
+{
+	return height;
+}
+
+int GameContext::GetActiveWidth()
+{
+	return width;
+}
+
+int GameContext::GetActiveTimeLimit()
+{
+	return timeLimit;
+}
+
+int GameContext::GetActiveMinesCount()
+{
+	return minesCount;
+}
+
+int GameContext::GetTimeLeft()
+{
+	return timeLeft;
+}
+
+GameState GameContext::GetState()
+{
+	return state;
+}
+
+int GameContext::MinesAround(int row, int col)
+{
+	if (OutOfBounds(row, col))
+		throw std::out_of_range("The specified cell is out of bounds.");
+
+	int count = 0;
+	for (int offsetRow = -1; offsetRow <= 1; offsetRow++)
+		for (int offsetCol = -1; offsetCol <= 1; offsetCol++)
+			if (!OutOfBounds(row + offsetRow, col + offsetCol))
+				if (mines[row + offsetRow][col + offsetCol])
+					count++;
+
+	return count;
+}
+
+void GameContext::TimeStep()
+{
+	if (timeLimit > 0 && timeLeft > 0)
+		timeLeft--;
+}
+
+void GameContext::Reveal(int row, int col)
+{
+	if (OutOfBounds(row, col))
+		throw std::out_of_range("The specified cell is out of bounds.");
+
+	if (state != Ready || state != Active)
+		return;
+
+	if (revealed[row][col]) return;
+	if (flagged[row][col]) return;
+
+	revealed[row][col] = true;
+
+	if (mines[row][col]) {
+		state = Failure;
+		return;
+	}
+
+	if (state == Ready)
+		PlaceMines();
+
+	if (MinesAround(row, col) == 0) {
+		for (int offsetRow = -1; offsetRow <= 1; offsetRow++)
+			for (int offsetCol = -1; offsetCol <= 1; offsetCol++)
+				if (!OutOfBounds(row + offsetRow, col + offsetCol))
+					Reveal(row + offsetRow, col + offsetCol);
+	}
 }
 
 void GameContext::Reset()
@@ -94,7 +259,7 @@ void GameContext::Reset()
 
 	timeLeft = timeLimit;
 
-	minesPlaced = false;
-
 	CreateField();
+
+	state = Ready;
 }

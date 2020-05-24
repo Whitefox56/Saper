@@ -1,5 +1,13 @@
 #pragma once
 #include <stdlib.h>
+#include <stdexcept>
+
+enum GameState {
+	Ready,
+	Active,
+	Complete,
+	Failure
+};
 
 class GameContext
 {
@@ -13,7 +21,8 @@ class GameContext
 	int minesCount;
 	int timeLimit;
 	int timeLeft;
-	bool minesPlaced;
+
+	GameState state;
 
 	bool** mines;
 	bool** flagged;
@@ -31,6 +40,33 @@ public:
 	static GameContext* GetInstance();
 
 	bool OutOfBounds(int row, int col);
+
+	bool IsRevealed(int row, int col);
+	bool IsFlagged(int row, int col);
+	bool HasMine(int row, int col);
+
+	void SetWidth(int value);
+	void SetHeight(int value);
+	void SetMinesCount(int value);
+	void SetTimeLimit(int value);
+
+	int GetWidth();
+	int GetHeight();
+	int GetMinesCount();
+	int GetTimeLimit();
+
+	int GetActiveWidth();
+	int GetActiveHeight();
+	int GetActiveMinesCount();
+	int GetActiveTimeLimit();
+	int GetTimeLeft();
+	GameState GetState();
+
+	int MinesAround(int row, int col);
+
+	void TimeStep();
+
+	void Reveal(int row, int col);
 
 	void Reset();
 };
