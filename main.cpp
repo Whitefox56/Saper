@@ -4,6 +4,10 @@
 #include "framework.h"
 #include "resource.h"
 #include "GameContext.h"
+#include "GameUI.h"
+
+
+#define IDT_STEP_TIMER 1
 
 #define MAX_LOADSTRING 100
 
@@ -11,6 +15,8 @@
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
+
+GameUI* gameUI;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -26,8 +32,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
-
-    // TODO: Place code here.
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -127,14 +131,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
+	case WM_CREATE:
+		gameUI = new GameUI(hWnd, GameContext::GetInstance());
+		break;
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
             // Parse the menu selections:
             switch (wmId)
             {
+			case ID_NEWGAME:
+				GameContext::GetInstance()->Reset();
+				InvalidateRect(hWnd, NULL, true);
+				break;
 			case IDM_SETTINGS:
 				DialogBox(hInst, MAKEINTRESOURCE(IDD_SETTINGS), hWnd, Settings);
+				InvalidateRect(hWnd, NULL, true);
 				break;
             case IDM_ABOUT:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
@@ -167,28 +179,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			// in order to avoid GDI leaks!
 			HBITMAP oldBmp = (HBITMAP) SelectObject(memDC, bmp);
 
-			GameContext* gameContext = GameContext::GetInstance();
-			int height = gameContext->GetActiveHeight();
-			int width = gameContext->GetActiveWidth();
-
-			HBRUSH emptyBrush = CreateSolidBrush(RGB(128, 128, 255));
-			HBRUSH revealedBrush = CreateSolidBrush(RGB(255, 255, 255));
-			for (int row = 0; row < height; row++) {
-				for (int col = 0; col < width; col++) {
-					int left = col * 25;
-					int top = row * 25;
-					int right = col * 25 + 25;
-					int bottom = row * 25 + 25;
-					if (gameContext->IsRevealed(row, col))
-						SelectBrush(memDC, revealedBrush);
-					else
-						SelectBrush(memDC, emptyBrush);
-
-					Rectangle(memDC, left, top, right, bottom);
-				}
-			}
-			DeleteObject(emptyBrush);
-			DeleteObject(revealedBrush);
+			gameUI->Draw(memDC);
 
 			// OK, everything is drawn into memory DC, 
 			// now is the time to draw that final result into our target DC
@@ -206,6 +197,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
+	case WM_LBUTTONDOWN:
+	{
+		int mouseX = GET_X_LPARAM(lParam);
+		int mouseY = GET_Y_LPARAM(lParam);
+		gameUI->ClickLeft(mouseX, mouseY);
+		InvalidateRect(hWnd, NULL, true);
+	}
+	break;
+	case WM_RBUTTONDOWN:
+	{
+		int mouseX = GET_X_LPARAM(lParam);
+		int mouseY = GET_Y_LPARAM(lParam);
+		gameUI->ClickRight(mouseX, mouseY);
+		InvalidateRect(hWnd, NULL, true);
+	}
+	break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
@@ -239,22 +246,32 @@ INT_PTR CALLBACK Settings(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_INITDIALOG:
 	{
-		wchar_t str[4];
+		GameContext* gameContext = GameContext::GetInstance();
+		wchar_t str[20];
 
-		Edit_SetText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), L"10");
-		Edit_LimitText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), 2);
+		_itow_s(gameContext->GetHeight(), str, 10);
+		Edit_SetText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), str);
+		Edit_LimitText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), 3);
 
-		Edit_SetText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), L"10");
-		Edit_LimitText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), 2);
+		_itow_s(gameContext->GetWidth(), str, 10);
+		Edit_SetText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), str);
+		Edit_LimitText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), 3);
 
-		Edit_SetText(GetDlgItem(hDlg, IDC_MINES_EDIT), L"50");
+		_itow_s(gameContext->GetMinesCount(), str, 10);
+		Edit_SetText(GetDlgItem(hDlg, IDC_MINES_EDIT), str);
 		Edit_LimitText(GetDlgItem(hDlg, IDC_MINES_EDIT), 3);
 
-		_itow_s(120, str, 10);
-		Edit_SetText(GetDlgItem(hDlg, IDC_TIME_EDIT), str);
-		Edit_LimitText(GetDlgItem(hDlg, IDC_TIME_EDIT), 3);
-
-		Button_SetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK), BST_CHECKED);
+		if (gameContext->GetActiveTimeLimit() > 0) {
+			_itow_s(gameContext->GetTimeLimit(), str, 10);
+			Edit_SetText(GetDlgItem(hDlg, IDC_TIME_EDIT), str);
+			Edit_LimitText(GetDlgItem(hDlg, IDC_TIME_EDIT), 4);
+			Button_SetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK), BST_CHECKED);
+			Edit_Enable(GetDlgItem(hDlg, IDC_TIME_EDIT), TRUE);
+		}
+		else {
+			Button_SetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK), BST_UNCHECKED);
+			Edit_Enable(GetDlgItem(hDlg, IDC_TIME_EDIT), FALSE);
+		}
 
 		return (INT_PTR)TRUE;
 	}
@@ -263,6 +280,25 @@ INT_PTR CALLBACK Settings(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
+			if (LOWORD(wParam) == IDOK) {
+				GameContext* gameContext = GameContext::GetInstance();
+				wchar_t str[20];
+				Edit_GetText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), str, 20);
+				gameContext->SetHeight(_wtoi(str));
+				Edit_GetText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), str, 20);
+				gameContext->SetWidth(_wtoi(str));
+				Edit_GetText(GetDlgItem(hDlg, IDC_MINES_EDIT), str, 20);
+				gameContext->SetMinesCount(_wtoi(str));
+				auto checked = Button_GetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK)) == BST_CHECKED;
+				if (checked) {
+					Edit_GetText(GetDlgItem(hDlg, IDC_TIME_EDIT), str, 20);
+					gameContext->SetTimeLimit(_wtoi(str));
+				}
+				else {
+					gameContext->SetTimeLimit(0);
+				}
+				gameContext->Reset();
+			}
 			EndDialog(hDlg, LOWORD(wParam));
 			return (INT_PTR)TRUE;
 		}

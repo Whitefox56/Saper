@@ -215,6 +215,7 @@ int GameContext::MinesAround(int row, int col)
 
 void GameContext::TimeStep()
 {
+	if (state != Active) return;
 	if (timeLimit > 0 && timeLeft > 0)
 		timeLeft--;
 }
@@ -224,16 +225,22 @@ void GameContext::Reveal(int row, int col)
 	if (OutOfBounds(row, col))
 		throw std::out_of_range("The specified cell is out of bounds.");
 
-	if (state != Ready || state != Active)
+	if (state != Ready && state != Active)
 		return;
 
 	if (revealed[row][col]) return;
 	if (flagged[row][col]) return;
 
 	revealed[row][col] = true;
+	revealedCount++;
 
 	if (mines[row][col]) {
 		state = Failure;
+		return;
+	}
+
+	if (revealedCount == width * height - minesCount) {
+		state = Complete;
 		return;
 	}
 
@@ -248,6 +255,24 @@ void GameContext::Reveal(int row, int col)
 	}
 }
 
+void GameContext::ToggleFlagged(int row, int col)
+{
+	if (OutOfBounds(row, col))
+		throw std::out_of_range("The specified cell is out of bounds.");
+
+	if (state != Ready && state != Active)
+		return;
+
+	if (revealed[row][col]) return;
+
+	flagged[row][col] = !flagged[row][col];
+}
+
+void GameContext::SeedRandom(unsigned int seed)
+{
+	srand(seed);
+}
+
 void GameContext::Reset()
 {
 	DeleteField();
@@ -260,6 +285,8 @@ void GameContext::Reset()
 	timeLeft = timeLimit;
 
 	CreateField();
+
+	revealedCount = 0;
 
 	state = Ready;
 }

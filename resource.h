@@ -20,11 +20,12 @@
 #define IDC_MINES_EDIT                  1004
 #define IDC_MINES_STATIC                1005
 #define IDC_TIME_CHECK                  1006
-#define IDC_EDIT1                       1007
 #define IDC_TIME_EDIT                   1007
 #define IDC_TIME_STATIC                 1008
 #define ID_FILE_SETTINGS                32771
 #define IDM_SETTINGS                    32772
+#define ID_FILE_NEWGAME                 32773
+#define ID_NEWGAME                      32774
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -33,7 +34,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        130
-#define _APS_NEXT_COMMAND_VALUE         32773
+#define _APS_NEXT_COMMAND_VALUE         32775
 #define _APS_NEXT_CONTROL_VALUE         1009
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

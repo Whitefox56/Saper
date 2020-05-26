@@ -153,11 +153,13 @@
   <ItemGroup>
     <ClInclude Include="framework.h" />
     <ClInclude Include="GameContext.h" />
+    <ClInclude Include="GameUI.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GameContext.cpp" />
+    <ClCompile Include="GameUI.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>

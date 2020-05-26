@@ -21,6 +21,7 @@ class GameContext
 	int minesCount;
 	int timeLimit;
 	int timeLeft;
+	int revealedCount;
 
 	GameState state;
 
@@ -67,6 +68,9 @@ public:
 	void TimeStep();
 
 	void Reveal(int row, int col);
+	void ToggleFlagged(int row, int col);
+
+	void SeedRandom(unsigned int seed);
 
 	void Reset();
 };
