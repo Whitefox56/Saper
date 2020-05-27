@@ -6,7 +6,7 @@ GameContext::GameContext()
 {
 	settingsWidth = 10;
 	settingsHeight = 10;
-	settingsMinesCount = 30;
+	settingsMinesCount = 12;
 	settingsTimeLimit = 0;
 
 	mines = nullptr;
@@ -67,6 +67,7 @@ void GameContext::CreateField()
 
 void GameContext::PlaceMines()
 {
+	// цикл повторяет до тех пор, пока все мину не будут размещены
 	int placedCount = 0;
 	while (placedCount < minesCount) {
 		int row = rand() % height;
@@ -78,6 +79,7 @@ void GameContext::PlaceMines()
 		}
 	}
 
+	// после размещения мин начинается отсчёт времени
 	state = Active;
 }
 
@@ -135,7 +137,7 @@ void GameContext::SetHeight(int value)
 void GameContext::SetMinesCount(int value)
 {
 	int min = 10;
-	int max = width * height - width - height;
+	int max = settingsWidth * settingsHeight - settingsWidth - settingsHeight;
 	if (value < min) value = min;
 	if (value > max) value = max;
 	settingsMinesCount = value;
@@ -203,6 +205,7 @@ int GameContext::MinesAround(int row, int col)
 	if (OutOfBounds(row, col))
 		throw std::out_of_range("The specified cell is out of bounds.");
 
+	// считает мину в соседних клетках
 	int count = 0;
 	for (int offsetRow = -1; offsetRow <= 1; offsetRow++)
 		for (int offsetCol = -1; offsetCol <= 1; offsetCol++)
@@ -213,11 +216,16 @@ int GameContext::MinesAround(int row, int col)
 	return count;
 }
 
-void GameContext::TimeStep()
+void GameContext::TimeStep(unsigned int ms)
 {
+	// время отчитывается, если установлено ограничение времени, после размещения мин
 	if (state != Active) return;
-	if (timeLimit > 0 && timeLeft > 0)
-		timeLeft--;
+	if (timeLimit == 0) return;
+	timeLeft -= ms;
+	if (timeLeft <= 0) {
+		timeLeft = 0;
+		state = Failure;
+	}
 }
 
 void GameContext::Reveal(int row, int col)
@@ -234,19 +242,24 @@ void GameContext::Reveal(int row, int col)
 	revealed[row][col] = true;
 	revealedCount++;
 
+	// если в открытой клетке мина, игра окончена
 	if (mines[row][col]) {
 		state = Failure;
 		return;
 	}
 
+	// если открыты все клетки, кроме мин, игра завершена
 	if (revealedCount == width * height - minesCount) {
 		state = Complete;
 		return;
 	}
 
+	// после первого хода размещаются мины,
+	// поэтому первый ход всегда успешный
 	if (state == Ready)
 		PlaceMines();
 
+	// если вокруг клетки нет мин, клетки-соседи открываются автоматически
 	if (MinesAround(row, col) == 0) {
 		for (int offsetRow = -1; offsetRow <= 1; offsetRow++)
 			for (int offsetCol = -1; offsetCol <= 1; offsetCol++)
@@ -277,12 +290,14 @@ void GameContext::Reset()
 {
 	DeleteField();
 
+	// применяются настройки
 	width = settingsWidth;
 	height = settingsHeight;
 	minesCount = settingsMinesCount;
 	timeLimit = settingsTimeLimit;
 
-	timeLeft = timeLimit;
+	// сбрасывается обратный отсчёт
+	timeLeft = timeLimit * 1000;
 
 	CreateField();
 

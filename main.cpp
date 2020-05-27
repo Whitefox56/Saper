@@ -79,7 +79,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MINES));
+    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_SMALL));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
     wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_MINES);
@@ -103,7 +103,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
 
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
@@ -117,14 +117,33 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+void SetClientSize(HWND hwnd, int clientWidth, int clientHeight)
+{
+	if (IsWindow(hwnd))
+	{
+		RECT newClientRC;
+		GetClientRect(hwnd, &newClientRC);
+		if ((newClientRC.right - newClientRC.left) == clientWidth &&
+			(newClientRC.bottom - newClientRC.top) == clientHeight)
+			return;
+
+		DWORD dwStyle = GetWindowLongPtr(hwnd, GWL_STYLE);
+		DWORD dwExStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+		HMENU menu = GetMenu(hwnd);
+
+		RECT rc = { 0, 0, clientWidth, clientHeight };
+
+		AdjustWindowRectEx(&rc, dwStyle, menu ? TRUE : FALSE, dwExStyle);
+
+		SetWindowPos(hwnd, NULL, 0, 0, rc.right - rc.left, rc.bottom - rc.top,
+			SWP_NOZORDER | SWP_NOMOVE);
+	}
+}
+
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
 //  PURPOSE: Processes messages for the main window.
-//
-//  WM_COMMAND  - process the application menu
-//  WM_PAINT    - Paint the main window
-//  WM_DESTROY  - post a quit message and return
 //
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -132,21 +151,36 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
     {
 	case WM_CREATE:
-		gameUI = new GameUI(hWnd, GameContext::GetInstance());
+		gameUI = new GameUI(GameContext::GetInstance());
+		GameContext::GetInstance()->Reset();
+		GameContext::GetInstance()->SeedRandom(time(0));
+		SetTimer(hWnd, IDT_STEP_TIMER, 200, NULL);
 		break;
+	case WM_TIMER:
+	{
+		switch (wParam)
+		{
+		case IDT_STEP_TIMER:
+			// таймер сообщает игровому контексту о прошедшем времени
+			GameContext::GetInstance()->TimeStep(200);
+			InvalidateRect(hWnd, NULL, false);
+			return 0;
+		}
+	}
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
-            // Parse the menu selections:
             switch (wmId)
             {
 			case ID_NEWGAME:
+				// новая игра
 				GameContext::GetInstance()->Reset();
-				InvalidateRect(hWnd, NULL, true);
+				InvalidateRect(hWnd, NULL, false);
 				break;
 			case IDM_SETTINGS:
+				// настройки
 				DialogBox(hInst, MAKEINTRESOURCE(IDD_SETTINGS), hWnd, Settings);
-				InvalidateRect(hWnd, NULL, true);
+				InvalidateRect(hWnd, NULL, false);
 				break;
             case IDM_ABOUT:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
@@ -161,9 +195,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_PAINT:
         {
+			// настраивается размер окна
+			SetClientSize(hWnd, gameUI->GetWidth(), gameUI->GetHeight());
+
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
 
+			// double-buffered
 			HDC memDC = CreateCompatibleDC(hdc);
 
 			// get window's client rectangle. We need this for bitmap creation.
@@ -202,7 +240,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		int mouseX = GET_X_LPARAM(lParam);
 		int mouseY = GET_Y_LPARAM(lParam);
 		gameUI->ClickLeft(mouseX, mouseY);
-		InvalidateRect(hWnd, NULL, true);
+		InvalidateRect(hWnd, NULL, false);
 	}
 	break;
 	case WM_RBUTTONDOWN:
@@ -210,7 +248,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		int mouseX = GET_X_LPARAM(lParam);
 		int mouseY = GET_Y_LPARAM(lParam);
 		gameUI->ClickRight(mouseX, mouseY);
-		InvalidateRect(hWnd, NULL, true);
+		InvalidateRect(hWnd, NULL, false);
 	}
 	break;
     default:
@@ -239,6 +277,51 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
+// считывает с полей параметры игры
+void ReadSettings(HWND hDlg, int& width, int& height, int& minesCount, int& timeLimit) {
+	wchar_t str[20];
+	Edit_GetText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), str, 20);
+	height = _wtoi(str);
+	Edit_GetText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), str, 20);
+	width = _wtoi(str);
+	Edit_GetText(GetDlgItem(hDlg, IDC_MINES_EDIT), str, 20);
+	minesCount = _wtoi(str);
+	auto checked = Button_GetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK)) == BST_CHECKED;
+	if (checked) {
+		Edit_GetText(GetDlgItem(hDlg, IDC_TIME_EDIT), str, 20);
+		timeLimit = _wtoi(str);
+	}
+	else {
+		timeLimit = 0;
+	}
+}
+
+// выписывает в поля параметры игры
+void WriteSettings(HWND hDlg, int width, int height, int minesCount, int timeLimit) {
+	wchar_t str[20];
+	_itow_s(height, str, 10);
+	Edit_SetText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), str);
+
+	_itow_s(width, str, 10);
+	Edit_SetText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), str);
+
+	_itow_s(minesCount, str, 10);
+	Edit_SetText(GetDlgItem(hDlg, IDC_MINES_EDIT), str);
+
+	if (timeLimit > 0) {
+		_itow_s(timeLimit, str, 10);
+		Edit_SetText(GetDlgItem(hDlg, IDC_TIME_EDIT), str);
+		Button_SetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK), BST_CHECKED);
+		Edit_Enable(GetDlgItem(hDlg, IDC_TIME_EDIT), TRUE);
+	}
+	else {
+		Edit_SetText(GetDlgItem(hDlg, IDC_TIME_EDIT), L"");
+		Button_SetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK), BST_UNCHECKED);
+		Edit_Enable(GetDlgItem(hDlg, IDC_TIME_EDIT), FALSE);
+	}
+}
+
+// Функция обработки событий в окне настроек
 INT_PTR CALLBACK Settings(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(lParam);
@@ -246,57 +329,36 @@ INT_PTR CALLBACK Settings(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_INITDIALOG:
 	{
+		// инициализцация окна
+		// в поля вводятся текущие параметры игры
 		GameContext* gameContext = GameContext::GetInstance();
-		wchar_t str[20];
 
-		_itow_s(gameContext->GetHeight(), str, 10);
-		Edit_SetText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), str);
-		Edit_LimitText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), 3);
+		Edit_LimitText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), 4);
+		Edit_LimitText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), 4);
+		Edit_LimitText(GetDlgItem(hDlg, IDC_MINES_EDIT), 4);
+		Edit_LimitText(GetDlgItem(hDlg, IDC_TIME_EDIT), 4);
 
-		_itow_s(gameContext->GetWidth(), str, 10);
-		Edit_SetText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), str);
-		Edit_LimitText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), 3);
-
-		_itow_s(gameContext->GetMinesCount(), str, 10);
-		Edit_SetText(GetDlgItem(hDlg, IDC_MINES_EDIT), str);
-		Edit_LimitText(GetDlgItem(hDlg, IDC_MINES_EDIT), 3);
-
-		if (gameContext->GetActiveTimeLimit() > 0) {
-			_itow_s(gameContext->GetTimeLimit(), str, 10);
-			Edit_SetText(GetDlgItem(hDlg, IDC_TIME_EDIT), str);
-			Edit_LimitText(GetDlgItem(hDlg, IDC_TIME_EDIT), 4);
-			Button_SetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK), BST_CHECKED);
-			Edit_Enable(GetDlgItem(hDlg, IDC_TIME_EDIT), TRUE);
-		}
-		else {
-			Button_SetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK), BST_UNCHECKED);
-			Edit_Enable(GetDlgItem(hDlg, IDC_TIME_EDIT), FALSE);
-		}
+		WriteSettings(hDlg, gameContext->GetWidth(), gameContext->GetHeight(),
+			gameContext->GetMinesCount(), gameContext->GetTimeLimit());
 
 		return (INT_PTR)TRUE;
 	}
 	break;
-
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
+			// при нажатии на ОК введённые параметры передаются игровому контексту
 			if (LOWORD(wParam) == IDOK) {
+				int height;
+				int width;
+				int minesCount;
+				int timeLimit;
+				ReadSettings(hDlg, width, height, minesCount, timeLimit);
 				GameContext* gameContext = GameContext::GetInstance();
-				wchar_t str[20];
-				Edit_GetText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), str, 20);
-				gameContext->SetHeight(_wtoi(str));
-				Edit_GetText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), str, 20);
-				gameContext->SetWidth(_wtoi(str));
-				Edit_GetText(GetDlgItem(hDlg, IDC_MINES_EDIT), str, 20);
-				gameContext->SetMinesCount(_wtoi(str));
-				auto checked = Button_GetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK)) == BST_CHECKED;
-				if (checked) {
-					Edit_GetText(GetDlgItem(hDlg, IDC_TIME_EDIT), str, 20);
-					gameContext->SetTimeLimit(_wtoi(str));
-				}
-				else {
-					gameContext->SetTimeLimit(0);
-				}
+				gameContext->SetHeight(height);
+				gameContext->SetWidth(width);
+				gameContext->SetMinesCount(minesCount);
+				gameContext->SetTimeLimit(timeLimit);
 				gameContext->Reset();
 			}
 			EndDialog(hDlg, LOWORD(wParam));
@@ -305,6 +367,48 @@ INT_PTR CALLBACK Settings(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		else if (LOWORD(wParam) == IDC_TIME_CHECK) {
 			auto checked = Button_GetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK)) == BST_CHECKED;
 			Edit_Enable(GetDlgItem(hDlg, IDC_TIME_EDIT), checked);
+		}
+		else if (HIWORD(wParam) == EN_KILLFOCUS) {
+			if (LOWORD(wParam) == IDC_HEIGHT_EDIT ||
+				LOWORD(wParam) == IDC_WIDTH_EDIT ||
+				LOWORD(wParam) == IDC_MINES_EDIT ||
+				LOWORD(wParam) == IDC_TIME_EDIT) {
+				GameContext* gameContext = GameContext::GetInstance();
+				// сохраняет текущие параметры
+				int currentHeight = gameContext->GetHeight();
+				int currentWidth = gameContext->GetWidth();
+				int currentMinesCount = gameContext->GetMinesCount();
+				int currentTimeLimit = gameContext->GetTimeLimit();
+
+				int height;
+				int width;
+				int minesCount;
+				int timeLimit;
+
+				// считывает введённые параметры
+				ReadSettings(hDlg, width, height, minesCount, timeLimit);
+
+				// применяет новые параметры игры
+				gameContext->SetHeight(height);
+				gameContext->SetWidth(width);
+				gameContext->SetMinesCount(minesCount);
+				gameContext->SetTimeLimit(timeLimit);
+
+				// игровой контекст приводит параметры к допустимым
+				height = gameContext->GetHeight();
+				width = gameContext->GetWidth();
+				minesCount = gameContext->GetMinesCount();
+				timeLimit = gameContext->GetTimeLimit();
+
+				// вписывает допустимые параметры в поля
+				WriteSettings(hDlg, width, height, minesCount, timeLimit);
+
+				// восстанавливает текущие параметры
+				gameContext->SetHeight(currentHeight);
+				gameContext->SetWidth(currentWidth);
+				gameContext->SetMinesCount(currentMinesCount);
+				gameContext->SetTimeLimit(currentTimeLimit);
+			}
 		}
 		break;
 	}
