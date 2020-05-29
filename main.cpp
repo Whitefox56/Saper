@@ -79,7 +79,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_SMALL));
+    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MINES));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
     wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_MINES);
@@ -277,51 +277,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
-// считывает с полей параметры игры
-void ReadSettings(HWND hDlg, int& width, int& height, int& minesCount, int& timeLimit) {
-	wchar_t str[20];
-	Edit_GetText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), str, 20);
-	height = _wtoi(str);
-	Edit_GetText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), str, 20);
-	width = _wtoi(str);
-	Edit_GetText(GetDlgItem(hDlg, IDC_MINES_EDIT), str, 20);
-	minesCount = _wtoi(str);
-	auto checked = Button_GetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK)) == BST_CHECKED;
-	if (checked) {
-		Edit_GetText(GetDlgItem(hDlg, IDC_TIME_EDIT), str, 20);
-		timeLimit = _wtoi(str);
-	}
-	else {
-		timeLimit = 0;
-	}
-}
-
-// выписывает в поля параметры игры
-void WriteSettings(HWND hDlg, int width, int height, int minesCount, int timeLimit) {
-	wchar_t str[20];
-	_itow_s(height, str, 10);
-	Edit_SetText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), str);
-
-	_itow_s(width, str, 10);
-	Edit_SetText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), str);
-
-	_itow_s(minesCount, str, 10);
-	Edit_SetText(GetDlgItem(hDlg, IDC_MINES_EDIT), str);
-
-	if (timeLimit > 0) {
-		_itow_s(timeLimit, str, 10);
-		Edit_SetText(GetDlgItem(hDlg, IDC_TIME_EDIT), str);
-		Button_SetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK), BST_CHECKED);
-		Edit_Enable(GetDlgItem(hDlg, IDC_TIME_EDIT), TRUE);
-	}
-	else {
-		Edit_SetText(GetDlgItem(hDlg, IDC_TIME_EDIT), L"");
-		Button_SetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK), BST_UNCHECKED);
-		Edit_Enable(GetDlgItem(hDlg, IDC_TIME_EDIT), FALSE);
-	}
-}
-
-// Функция обработки событий в окне настроек
+// Функция обработки событий в онке настроек
 INT_PTR CALLBACK Settings(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(lParam);
@@ -332,33 +288,57 @@ INT_PTR CALLBACK Settings(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		// инициализцация окна
 		// в поля вводятся текущие параметры игры
 		GameContext* gameContext = GameContext::GetInstance();
+		wchar_t str[20];
 
-		Edit_LimitText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), 4);
-		Edit_LimitText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), 4);
-		Edit_LimitText(GetDlgItem(hDlg, IDC_MINES_EDIT), 4);
-		Edit_LimitText(GetDlgItem(hDlg, IDC_TIME_EDIT), 4);
+		_itow_s(gameContext->GetHeight(), str, 10);
+		Edit_SetText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), str);
+		Edit_LimitText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), 3);
 
-		WriteSettings(hDlg, gameContext->GetWidth(), gameContext->GetHeight(),
-			gameContext->GetMinesCount(), gameContext->GetTimeLimit());
+		_itow_s(gameContext->GetWidth(), str, 10);
+		Edit_SetText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), str);
+		Edit_LimitText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), 3);
+
+		_itow_s(gameContext->GetMinesCount(), str, 10);
+		Edit_SetText(GetDlgItem(hDlg, IDC_MINES_EDIT), str);
+		Edit_LimitText(GetDlgItem(hDlg, IDC_MINES_EDIT), 3);
+
+		if (gameContext->GetActiveTimeLimit() > 0) {
+			_itow_s(gameContext->GetTimeLimit(), str, 10);
+			Edit_SetText(GetDlgItem(hDlg, IDC_TIME_EDIT), str);
+			Edit_LimitText(GetDlgItem(hDlg, IDC_TIME_EDIT), 4);
+			Button_SetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK), BST_CHECKED);
+			Edit_Enable(GetDlgItem(hDlg, IDC_TIME_EDIT), TRUE);
+		}
+		else {
+			Button_SetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK), BST_UNCHECKED);
+			Edit_Enable(GetDlgItem(hDlg, IDC_TIME_EDIT), FALSE);
+		}
 
 		return (INT_PTR)TRUE;
 	}
 	break;
+
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
 			// при нажатии на ОК введённые параметры передаются игровому контексту
 			if (LOWORD(wParam) == IDOK) {
-				int height;
-				int width;
-				int minesCount;
-				int timeLimit;
-				ReadSettings(hDlg, width, height, minesCount, timeLimit);
 				GameContext* gameContext = GameContext::GetInstance();
-				gameContext->SetHeight(height);
-				gameContext->SetWidth(width);
-				gameContext->SetMinesCount(minesCount);
-				gameContext->SetTimeLimit(timeLimit);
+				wchar_t str[20];
+				Edit_GetText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), str, 20);
+				gameContext->SetHeight(_wtoi(str));
+				Edit_GetText(GetDlgItem(hDlg, IDC_WIDTH_EDIT), str, 20);
+				gameContext->SetWidth(_wtoi(str));
+				Edit_GetText(GetDlgItem(hDlg, IDC_MINES_EDIT), str, 20);
+				gameContext->SetMinesCount(_wtoi(str));
+				auto checked = Button_GetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK)) == BST_CHECKED;
+				if (checked) {
+					Edit_GetText(GetDlgItem(hDlg, IDC_TIME_EDIT), str, 20);
+					gameContext->SetTimeLimit(_wtoi(str));
+				}
+				else {
+					gameContext->SetTimeLimit(0);
+				}
 				gameContext->Reset();
 			}
 			EndDialog(hDlg, LOWORD(wParam));
@@ -367,48 +347,6 @@ INT_PTR CALLBACK Settings(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		else if (LOWORD(wParam) == IDC_TIME_CHECK) {
 			auto checked = Button_GetCheck(GetDlgItem(hDlg, IDC_TIME_CHECK)) == BST_CHECKED;
 			Edit_Enable(GetDlgItem(hDlg, IDC_TIME_EDIT), checked);
-		}
-		else if (HIWORD(wParam) == EN_KILLFOCUS) {
-			if (LOWORD(wParam) == IDC_HEIGHT_EDIT ||
-				LOWORD(wParam) == IDC_WIDTH_EDIT ||
-				LOWORD(wParam) == IDC_MINES_EDIT ||
-				LOWORD(wParam) == IDC_TIME_EDIT) {
-				GameContext* gameContext = GameContext::GetInstance();
-				// сохраняет текущие параметры
-				int currentHeight = gameContext->GetHeight();
-				int currentWidth = gameContext->GetWidth();
-				int currentMinesCount = gameContext->GetMinesCount();
-				int currentTimeLimit = gameContext->GetTimeLimit();
-
-				int height;
-				int width;
-				int minesCount;
-				int timeLimit;
-
-				// считывает введённые параметры
-				ReadSettings(hDlg, width, height, minesCount, timeLimit);
-
-				// применяет новые параметры игры
-				gameContext->SetHeight(height);
-				gameContext->SetWidth(width);
-				gameContext->SetMinesCount(minesCount);
-				gameContext->SetTimeLimit(timeLimit);
-
-				// игровой контекст приводит параметры к допустимым
-				height = gameContext->GetHeight();
-				width = gameContext->GetWidth();
-				minesCount = gameContext->GetMinesCount();
-				timeLimit = gameContext->GetTimeLimit();
-
-				// вписывает допустимые параметры в поля
-				WriteSettings(hDlg, width, height, minesCount, timeLimit);
-
-				// восстанавливает текущие параметры
-				gameContext->SetHeight(currentHeight);
-				gameContext->SetWidth(currentWidth);
-				gameContext->SetMinesCount(currentMinesCount);
-				gameContext->SetTimeLimit(currentTimeLimit);
-			}
 		}
 		break;
 	}

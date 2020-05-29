@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
-// Включаемый файл, созданный в Microsoft Visual C++.
-// Используется Mines.rc
+// Microsoft Visual C++ generated include file.
+// Used by Mines.rc
 //
 #define IDC_MYICON                      2
 #define IDD_MINES_DIALOG                102
@@ -13,7 +13,6 @@
 #define IDC_MINES                       109
 #define IDR_MAINFRAME                   128
 #define IDD_SETTINGS                    129
-#define IDI_ICON1                       130
 #define IDC_HEIGHT_EDIT                 1000
 #define IDC_HEIGHT_STATIC               1001
 #define IDC_WIDTH_EDIT                  1002
@@ -34,7 +33,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        131
+#define _APS_NEXT_RESOURCE_VALUE        130
 #define _APS_NEXT_COMMAND_VALUE         32775
 #define _APS_NEXT_CONTROL_VALUE         1009
 #define _APS_NEXT_SYMED_VALUE           110
