@@ -137,7 +137,7 @@ void GameContext::SetHeight(int value)
 void GameContext::SetMinesCount(int value)
 {
 	int min = 10;
-	int max = width * height - width - height;
+	int max = settingsWidth * settingsHeight - settingsWidth - settingsHeight;
 	if (value < min) value = min;
 	if (value > max) value = max;
 	settingsMinesCount = value;
