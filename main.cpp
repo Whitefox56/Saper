@@ -161,7 +161,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (wParam)
 		{
 		case IDT_STEP_TIMER:
-			// таймер сообщает игровому контексту о прошедшем времени
+			// a timer informs the game context of elapsed time
 			GameContext::GetInstance()->TimeStep(200);
 			InvalidateRect(hWnd, NULL, false);
 			return 0;
@@ -173,12 +173,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             switch (wmId)
             {
 			case ID_NEWGAME:
-				// нова€ игра
+				// new game
 				GameContext::GetInstance()->Reset();
 				InvalidateRect(hWnd, NULL, false);
 				break;
 			case IDM_SETTINGS:
-				// настройки
+				// settings
 				DialogBox(hInst, MAKEINTRESOURCE(IDD_SETTINGS), hWnd, Settings);
 				InvalidateRect(hWnd, NULL, false);
 				break;
@@ -195,7 +195,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_PAINT:
         {
-			// настраиваетс€ размер окна
+			// customizable window size
 			SetClientSize(hWnd, gameUI->GetWidth(), gameUI->GetHeight());
 
             PAINTSTRUCT ps;
@@ -229,7 +229,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			SelectObject(memDC, oldBmp); // select back original bitmap
 			DeleteObject(bmp); // delete bitmap since it is no longer required
 			DeleteDC(memDC);   // delete memory DC since it is no longer required
-			EndPaint(hWnd, &ps); //завершение рисовани€
+			EndPaint(hWnd, &ps); //completion of drawing
         }
         break;
     case WM_DESTROY:
@@ -277,7 +277,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
-// считывает с полей параметры игры
+// reads game parameters from fields
 void ReadSettings(HWND hDlg, int& width, int& height, int& minesCount, int& timeLimit) {
 	wchar_t str[20];
 	Edit_GetText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), str, 20);
@@ -296,7 +296,7 @@ void ReadSettings(HWND hDlg, int& width, int& height, int& minesCount, int& time
 	}
 }
 
-// выписывает в пол€ параметры игры
+// writes game parameters to fields
 void WriteSettings(HWND hDlg, int width, int height, int minesCount, int timeLimit) {
 	wchar_t str[20];
 	_itow_s(height, str, 10);
@@ -321,7 +321,7 @@ void WriteSettings(HWND hDlg, int width, int height, int minesCount, int timeLim
 	}
 }
 
-// ‘ункци€ обработки событий в окне настроек
+// Event handling function in the settings window
 INT_PTR CALLBACK Settings(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(lParam);
@@ -329,8 +329,8 @@ INT_PTR CALLBACK Settings(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_INITDIALOG:
 	{
-		// инициализцаци€ окна
-		// в пол€ ввод€тс€ текущие параметры игры
+		// window initialization
+		// the current game parameters are entered into the fields
 		GameContext* gameContext = GameContext::GetInstance();
 
 		Edit_LimitText(GetDlgItem(hDlg, IDC_HEIGHT_EDIT), 4);
@@ -347,7 +347,7 @@ INT_PTR CALLBACK Settings(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
-			// при нажатии на ќ  введЄнные параметры передаютс€ игровому контексту
+			// when you click OK, the entered parameters are transferred to the game context
 			if (LOWORD(wParam) == IDOK) {
 				int height;
 				int width;
@@ -374,7 +374,7 @@ INT_PTR CALLBACK Settings(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 				LOWORD(wParam) == IDC_MINES_EDIT ||
 				LOWORD(wParam) == IDC_TIME_EDIT) {
 				GameContext* gameContext = GameContext::GetInstance();
-				// сохран€ет текущие параметры
+				// saves current parameters
 				int currentHeight = gameContext->GetHeight();
 				int currentWidth = gameContext->GetWidth();
 				int currentMinesCount = gameContext->GetMinesCount();
@@ -385,25 +385,25 @@ INT_PTR CALLBACK Settings(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 				int minesCount;
 				int timeLimit;
 
-				// считывает введЄнные параметры
+				// reads entered parameters
 				ReadSettings(hDlg, width, height, minesCount, timeLimit);
 
-				// примен€ет новые параметры игры
+				// applies new game settings
 				gameContext->SetHeight(height);
 				gameContext->SetWidth(width);
 				gameContext->SetMinesCount(minesCount);
 				gameContext->SetTimeLimit(timeLimit);
 
-				// игровой контекст приводит параметры к допустимым
+				// game context sets parameters to valid
 				height = gameContext->GetHeight();
 				width = gameContext->GetWidth();
 				minesCount = gameContext->GetMinesCount();
 				timeLimit = gameContext->GetTimeLimit();
 
-				// вписывает допустимые параметры в пол€
+				// enter valid parameters in the fields
 				WriteSettings(hDlg, width, height, minesCount, timeLimit);
 
-				// восстанавливает текущие параметры
+				// restores current settings
 				gameContext->SetHeight(currentHeight);
 				gameContext->SetWidth(currentWidth);
 				gameContext->SetMinesCount(currentMinesCount);

@@ -1,6 +1,5 @@
 //{{NO_DEPENDENCIES}}
-// Включаемый файл, созданный в Microsoft Visual C++.
-// Используется Mines.rc
+// Is used Mines.rc
 //
 #define IDC_MYICON                      2
 #define IDD_MINES_DIALOG                102

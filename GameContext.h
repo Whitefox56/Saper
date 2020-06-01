@@ -1,125 +1,125 @@
 #pragma once
 #include <stdexcept>
 
-// Состояние игры
+// Game state
 enum GameState {
-	// Начало игры
+	// Beginning of the game
 	Ready,
-	// Игра идёт
+	// The game is on
 	Active,
-	// Игра завершена успешно
+	// Game completed successfully
 	Complete,
-	// Игра завершена неудачно
+	// Game failed
 	Failure
 };
 
-// Игровой контекст.
-// Управляет игровыми процессами.
+// Game context.
+// Controls gameplay.
 class GameContext
 {
-	// Настройки игры
+	// Game settings
 	int settingsWidth;
 	int settingsHeight;
 	int settingsMinesCount;
 	int settingsTimeLimit;
 
-	// ширина поля в клетках
+	// field width in cells
 	int width;
-	// высота поля в клетках
+	// field height in cells
 	int height;
-	// количество мин
+	// number of mines
 	int minesCount;
-	// ограничение времени в секундах
+	// time limit in seconds
 	int timeLimit;
-	// остаток времени в миллисекундах
+	// remaining time in milliseconds
 	int timeLeft;
-	// количество открытых клеток
+	// number of open cells
 	int revealedCount;
 
-	// состояние игры
+	// game state
 	GameState state;
 
-	// мины
+	// mines
 	bool** mines;
-	// флаги
+	// flags
 	bool** flagged;
-	// открытые клетки
+	// open cells
 	bool** revealed;
 
-	// создаёт и инициализирует новый игровой контекст
+	// creates and initializes a new game context
 	GameContext();
-	// освобождает занятые ресурсы
+	// frees up occupied resources
 	~GameContext();
-	// единственный экземпляр класса
+	// single instance of a class
 	static GameContext* instance;
 	
-	// удаляет массивы со свойствами клеток
+	// removes arrays with cell properties
 	void DeleteField();
-	// создаёт массивы со свойствами клеток
+	// creates arrays with cell properties
 	void CreateField();
-	// размещает мины на поле
+	// places mines on the field
 	void PlaceMines();
 
 public:
-	// возвращает единственный экземпляр игрового контекста
+	// returns a single instance of the game context
 	static GameContext* GetInstance();
 
-	// возвращает true, если указанная клетка за пределами поля
+	// returns true if the specified cell is outside the field
 	bool OutOfBounds(int row, int col);
 
-	// возвращает true, если клетка открыта
+	// returns true if the cell is open
 	bool IsRevealed(int row, int col);
-	// возвращает true, если на клетке поставлен флажок
+	// returns true if the box is checked
 	bool IsFlagged(int row, int col);
-	// возвращает true, если на клетке находится мина
+	// returns true if there is a mine on the cell
 	bool HasMine(int row, int col);
 
-	// настраивает ширину поля
+	// adjusts the field width
 	void SetWidth(int value);
-	// настраивает высоту поля
+	// adjusts field height
 	void SetHeight(int value);
-	// настраивает количество мин
+	// sets the number of minutes
 	void SetMinesCount(int value);
-	// настраивает ограничение времени в секундах
+	// sets the time limit in seconds	
 	void SetTimeLimit(int value);
 
-	// возвращает настроенную ширину поля
+	// returns custom field width
 	int GetWidth();
-	// возвращает настроенную высоту поля
+	// returns the adjusted field height
 	int GetHeight();
-	// возвращает настроенное количество мин
+	// returns the configured number of min
 	int GetMinesCount();
-	// возвращает настроенное ограничение времени в секундах
+	// returns the configured time limit in seconds
 	int GetTimeLimit();
 
-	// возвращает действующую ширину поля
+	// returns the actual field width
 	int GetActiveWidth();
-	// возвращает действующую высоту поля
+	// returns the current field height
 	int GetActiveHeight();
-	// возвращает действующее количество мин
+	// returns the actual number of min
 	int GetActiveMinesCount();
-	// возвращает действующее ограничение времени в секундах
+	// returns the current time limit in seconds
 	int GetActiveTimeLimit();
-	// возвращает оставшееся время в миллисекундах
+	// returns the remaining time in milliseconds
 	int GetTimeLeft();
-	// возвращает состояние игры
+	// returns the state of the game
 	GameState GetState();
 
-	// возвращает количество мин в окружении клетки
+	// returns the number of mines surrounded by cells
 	int MinesAround(int row, int col);
 
-	// учитывает прошедшее время в миллисекундах
+	// counts elapsed time in milliseconds
 	void TimeStep(unsigned int ms);
 
-	// открывает клетку
+	// opens the cage
 	void Reveal(int row, int col);
-	// ставит или убирает флажок
+	// check or uncheck
 	void ToggleFlagged(int row, int col);
 
-	// иницализирует генератор случайных чисел
+	// initializes random number generator
 	void SeedRandom(unsigned int seed);
 
-	// начинает новую игру
+	// starts a new game
 	void Reset();
 };
 
